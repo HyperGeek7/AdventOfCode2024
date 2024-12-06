@@ -106,7 +106,9 @@ def trace_path(
             return False
 
 
-def part2(input_lines: list[str], possible_locations: Optional[set[coord]] = None) -> int:
+def part2(
+    input_lines: list[str], possible_locations: Optional[set[coord]] = None
+) -> int:
     obstacle_locations: set[coord] = set()
 
     # Reset the queue, just in case part 1 messed it up.
@@ -126,7 +128,9 @@ def part2(input_lines: list[str], possible_locations: Optional[set[coord]] = Non
         raise Exception("Where am I?")
 
     if possible_locations is None:
-        possible_locations = set((i, j) for i in range(len(input_lines)) for j in range(len(input_lines[0])))
+        possible_locations = set(
+            (i, j) for i in range(len(input_lines)) for j in range(len(input_lines[0]))
+        )
 
     for i, j in possible_locations:
         char = input_lines[i][j]
@@ -134,13 +138,9 @@ def part2(input_lines: list[str], possible_locations: Optional[set[coord]] = Non
             continue
 
         this_input_set = input_lines.copy()
-        this_input_set[i] = (
-            this_input_set[i][0:j] + "#" + this_input_set[i][j + 1 :]
-        )
+        this_input_set[i] = this_input_set[i][0:j] + "#" + this_input_set[i][j + 1 :]
 
-        if trace_path(
-            location, guard_facing, this_input_set, facing_directions.copy()
-        ):
+        if trace_path(location, guard_facing, this_input_set, facing_directions.copy()):
             obstacle_locations.add((i, j))
 
     return len(obstacle_locations)
