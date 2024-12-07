@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
-from collections import deque
+from collections import defaultdict, deque
+from time import sleep
 from typing import Optional
+
+from rich.console import Console
+from rich.live import Live
 
 coord = tuple[int, int]
 coord_facing = tuple[coord, str]
@@ -15,9 +19,74 @@ facing_directions = deque(
     )
 )
 
+facing_chars = {
+    "U": "^",
+    "R": ">",
+    "D": "v",
+    "L": "<",
+}
 
-def part1(input_lines: list[str]) -> set[coord]:
+
+def render_path(
+    input_lines: list[str],
+    guard_state: coord_facing,
+    location_states: defaultdict[coord, set[str]],
+    live: Live,
+):
+    # Listen. This whole function is hilariously inefficient.
+    # I'm not fixing it. It works just enough to do what I want.
+    console = live.console
+    width, height = console.size
+
+    y, x = guard_state[0]
+
+    start_y = 0
+    start_x = 0
+
+    if len(input_lines) > height:
+        if y > height // 2:
+            start_y = y - (height // 2)
+        else:
+            start_y = 0
+
+    if len(input_lines[0]) > width:
+        if x > width // 2:
+            start_x = len(input_lines[0]) - width
+        else:
+            start_x = x // 2
+
+    out_lines: list[str] = []
+    for i in range(start_y, start_y + height):
+        this_line = []
+        for j in range(start_x, start_x + width):
+            try:
+                char = input_lines[i][j]
+            except IndexError:
+                break
+            if (i, j) == guard_state[0]:
+                char = f"[bold green1]{facing_chars[guard_state[1]]}[/]"
+            elif (i, j) in location_states:
+                if "U" in location_states[i, j] or "D" in location_states[i, j]:
+                    if (
+                        "L" not in location_states[i, j]
+                        and "R" not in location_states[i, j]
+                    ):
+                        char = "[bold magenta1]│[/]"
+                    else:
+                        char = "[bold magenta1]┼[/]"
+                else:
+                    char = "[bold magenta1]─[/]"
+
+            this_line.append(char)
+
+        out_lines.append("".join(this_line))
+
+    live.update("\n".join(out_lines), refresh=True)
+
+
+def part1(input_lines: list[str], live: Optional[Live] = None) -> set[coord]:
     visited_locations: set[coord] = set()
+    location_states: defaultdict[coord, set[str]] = defaultdict(set)
 
     guard_facing = facing_directions[0]
     location: coord = (-1, -1)
@@ -33,6 +102,7 @@ def part1(input_lines: list[str]) -> set[coord]:
 
     while True:
         visited_locations.add(location)
+        location_states[location].add(guard_facing)
         i, j = location
         if guard_facing == "U":
             next_location = (i - 1, j)
@@ -53,6 +123,10 @@ def part1(input_lines: list[str]) -> set[coord]:
                 location = next_location
         except IndexError:
             break
+
+        if live is not None:
+            render_path(input_lines, (location, guard_facing), location_states, live)
+            sleep(0.01)
 
     # return len(visited_locations)
     return visited_locations
@@ -147,11 +221,14 @@ def part2(
 
 
 def main():
-    with open("day06.input.txt") as fin:
-        input_lines = [line.strip() for line in fin if len(line) > 0]
-        orig_path = part1(input_lines)
-        print(len(orig_path))
-        print(part2(input_lines, orig_path))
+    console = Console(highlight=False)
+    with Live(console=console, screen=True) as live:
+        with open("day06.input.txt") as fin:
+            input_lines = [line.strip() for line in fin if len(line) > 0]
+            orig_path = part1(input_lines, live)
+            print(len(orig_path))
+            input()
+            # print(part2(input_lines, orig_path))
 
 
 if __name__ == "__main__":
